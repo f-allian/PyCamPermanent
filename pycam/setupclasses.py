@@ -311,7 +311,7 @@ class SpecsBase:
                         elif val == "False" or val == "0":
                             setattr(self, attr, False)
                         else:
-                            default_val = getattr(self.__class__(), "attr")
+                            default_val = getattr(self.__class__(), attr)
                             warnings.warn(
                                 "Unexpected value for {}: {}. Setting to default {}".format(
                                     attr, val, default_val
