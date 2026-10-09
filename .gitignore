@@ -200,3 +200,5 @@ pycam/tests/test_data/Lascar/
 pycam/scripts/clouduploaders/test/
 
 pycam/conf/cam_geom/reventador_camera.txt
+
+pycam/tests/test_data/**/Processed_spec_*/
