@@ -12,3 +12,12 @@ packages = ["pycam"]
 
 [tool.setuptools.dynamic]
 dependencies = {file = ['requirements.txt']}
+
+[tool.pytest.ini_options]
+testpaths = ["pycam/tests"]
+# Only collect test_*.py: the default also collects *_test.py, which matches the manual hardware scripts
+# (run_darks_test.py etc.) that instantiate Camera/Spectrometer on import
+python_files = ["test_*.py"]
+norecursedirs = ["archive"]
+# Put the repo root on sys.path so plain `pytest` (not just `python -m pytest`) can import pycam
+pythonpath = ["."]

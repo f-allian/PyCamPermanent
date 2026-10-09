@@ -18,7 +18,7 @@ class TestPyplisWorker(unittest.TestCase):
         (400, True)
     ])
     def test_buffer_size(self, buff_size, expected):
-        pyplis_worker = PyplisWorker()
+        pyplis_worker = PyplisWorker(config_path="./pycam/conf/processing_setting_defaults.yml")
         pyplis_worker.img_dir = "./pycam/tests/test_data"
         pyplis_worker.img_list = pyplis_worker.get_img_list()
         pyplis_worker.doas_fov_recal_mins = 30

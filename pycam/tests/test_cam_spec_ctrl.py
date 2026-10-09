@@ -4,16 +4,22 @@
 pycam test module for Camera and Spectrometer classes
 """
 
+from pathlib import Path
+
 import cv2
 from PIL import Image
 import numpy as np
+import pytest
 
+from pycam import controllers
 from pycam.controllers import Camera
 
+
+@pytest.mark.skipif(not hasattr(controllers, 'Picamera2'), reason="Requires Picamera2 (Raspberry Pi only)")
 class TestCamera:
     """Camera controller method tests"""
 
-    camera_img = './test_data/2019-09-18T074335_fltrA_1ag_999904ss_Plume.png'
+    camera_img = str(Path(__file__).parent / 'test_data' / '2019-09-18T074335_fltrA_1ag_999904ss_Plume.png')
 
     def test_check_saturation(self):
         # INstantiate object
