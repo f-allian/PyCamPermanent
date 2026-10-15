@@ -482,6 +482,13 @@ class PyplisWorker:
                 self.cross_corr_lines[line_type] = line
             self.PCS_lines_all.append(line)
             self.PCS_lines_all[-1].line_id = str(i)
+
+        # If the line files carry no type=young/old label, use the GUI defaults: first line young, second line old
+        if len(self.PCS_lines_all) >= 2:
+            if self.cross_corr_lines['young'] is None:
+                self.cross_corr_lines['young'] = self.PCS_lines_all[0]
+            if self.cross_corr_lines['old'] is None:
+                self.cross_corr_lines['old'] = self.PCS_lines_all[1]
         self.PCS_lines = [pcs_line for pcs_line in self.PCS_lines_all if not pcs_line == self.cross_corr_lines['old']]
 
     def save_all_dil(self, save_dir):
@@ -4082,7 +4089,9 @@ class PyplisWorker:
         self.PyplisLogger.info('Processing time: {:.1f}'.format(proc_time))
         self.PyplisLogger.info('Time per image: {:.2f}'.format(proc_time / len(self.img_list)))
 
-        LoggerManager.remove_file_handler(self.PyplisLogger, self.log_path, delete = True)
+        # Headless runs call this method directly, so no log file may have been set up
+        if getattr(self, 'log_path', None) is not None:
+            LoggerManager.remove_file_handler(self.PyplisLogger, self.log_path, delete = True)
 
         self.in_processing = False
 
