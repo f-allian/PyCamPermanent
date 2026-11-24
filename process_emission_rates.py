@@ -1,4 +1,5 @@
 import argparse
+import sys
 import yaml
 from pathlib import Path
 
@@ -34,6 +35,14 @@ def setup_pyplis_worker(config_path):
     Setup and return the PyplisWorker instance with the given configuration path.
     """
     pyplis_worker = PyplisWorker(config_path)
+
+    # PyplisWorker falls back to the built-in default config if the supplied one fails to load.
+    # The GUI shows this as a dialog; a headless run must stop instead of processing with the wrong settings.
+    if pyplis_worker.load_default_conf_errors:
+        sys.exit(f"ERROR: could not load config {config_path}\n"
+                 f"{pyplis_worker.load_default_conf_errors}\n"
+                 f"Headless run stopped: the built-in default config is not used for processing.")
+
     pyplis_worker.load_pcs_from_config()
     pyplis_worker.plot_iter = False
     pyplis_worker.headless = True
@@ -54,6 +63,11 @@ def setup_pyplis_worker(config_path):
 def setup_ifit_worker(config_path):
     with open(config_path, "r") as file:
         config = yaml.safe_load(file)
+
+    required_keys = ['species_paths', 'dark_img_dir', 'ILS_path', 'ld_lookup_1', 'ld_lookup_2', 'spec_dir']
+    missing_keys = [key for key in required_keys if key not in (config or {})]
+    if missing_keys:
+        sys.exit(f"ERROR: config {config_path} is missing required keys: {', '.join(missing_keys)}")
 
     # Expand paths
     ils_path = PyplisWorker.expand_config_path(None, path=config['ILS_path'], config_dir=Path(config_path).parent)
