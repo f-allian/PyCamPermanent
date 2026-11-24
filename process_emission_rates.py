@@ -36,12 +36,12 @@ def setup_pyplis_worker(config_path):
     """
     pyplis_worker = PyplisWorker(config_path)
 
-    # PyplisWorker falls back to the built-in default config if the supplied one fails to load.
-    # The GUI shows this as a dialog; a headless run must stop instead of processing with the wrong settings.
+    # If the config can't be loaded, PyplisWorker quietly switches to the default config
+    # that ships with PyCam. The GUI warns about this; headless we stop instead.
     if pyplis_worker.load_default_conf_errors:
         sys.exit(f"ERROR: could not load config {config_path}\n"
                  f"{pyplis_worker.load_default_conf_errors}\n"
-                 f"Headless run stopped: the built-in default config is not used for processing.")
+                 f"Stopping, so the default config is not used by mistake.")
 
     pyplis_worker.load_pcs_from_config()
     pyplis_worker.plot_iter = False
@@ -64,8 +64,10 @@ def setup_ifit_worker(config_path):
     with open(config_path, "r") as file:
         config = yaml.safe_load(file)
 
+    if config is None:
+        config = {}
     required_keys = ['species_paths', 'dark_img_dir', 'ILS_path', 'ld_lookup_1', 'ld_lookup_2', 'spec_dir']
-    missing_keys = [key for key in required_keys if key not in (config or {})]
+    missing_keys = [key for key in required_keys if key not in config]
     if missing_keys:
         sys.exit(f"ERROR: config {config_path} is missing required keys: {', '.join(missing_keys)}")
 

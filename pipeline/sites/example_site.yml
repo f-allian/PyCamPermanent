@@ -1,0 +1,37 @@
+# Site file for pipeline/run_mvp.py. Copy to <root>/sites/<name>.yml and edit.
+# One file per site; run_mvp.py processes every enabled site in <root>/sites/.
+
+name: reventador              # used for folder names under results/, state/, logs/
+enabled: true
+
+source:
+  # Where the Pi stores data: one folder per day with hour sub-folders (00..23).
+  # Placeholders: {date} = YYYY-MM-DD, {yyyy}, {mm}, {dd}
+  type: ssh                   # "ssh" (copy from the Pi with rsync) or "local" (folder on this machine)
+  host: pi@100.81.73.88
+  day_path: /mnt/pycam/data/{date}/{yyyy}/{mm}/{dd}
+  bwlimit_kbps: 2000          # rsync bandwidth limit in KB/s; remove for no limit
+  timeout_s: 3600
+
+# Processing config (same format as a PyCam process config). Relative paths are resolved
+# like PyCam does: first against the code folder, then against this template's folder.
+# img_dir, spec_dir and transfer_dir are replaced by the hour's working folder.
+template: /root/pycam_mvp/sites/reventador_template.yml
+
+# Optional: values that override the template for pipeline runs
+overrides:
+  # Buffer must span doas_fov_recal_mins (check_buffer_size), else a GUI pop-up blocks the
+  # headless run. 500 x 5 s frame gap = 41.7 min for Reventador's 40 min (frame gap unverified).
+  img_buff_size: 500
+
+extensions: [.png, .npy]      # files copied per hour (the Pi's .json sidecars are not copied; whether PyCam needs them is unchecked)
+min_minutes: 45               # hours with less data are marked .skipped. 35 was found for Lascar's
+                              # 30-min settings; Reventador uses 40, so 45 until a shorter chunk is tested
+grace_minutes: 10             # wait this long after the hour ends before processing it
+lookback_days: 1              # 1 = today only (UTC); 2 adds yesterday (a full backfill, about 6 GB)
+max_hours_per_run: 1          # hours processed per run; cron catches up over later runs
+web_prefix: reventador        # web/<web_prefix>_data_<date>.json and <web_prefix>_dates.json
+
+# Optional environment variables for the PyCam runs, e.g. to force the OpenBLAS kernel
+# env:
+#   OPENBLAS_CORETYPE: Haswell

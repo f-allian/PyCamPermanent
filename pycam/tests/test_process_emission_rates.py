@@ -32,8 +32,6 @@ def full_ifit_config():
     }
 
 
-# --- setup_ifit_worker (used by doas, pyplis and watcher) ---------------------
-
 def test_ifit_missing_keys_exits_and_names_them(tmp_path):
     config = full_ifit_config()
     del config['species_paths']
@@ -76,11 +74,8 @@ def test_ifit_valid_config_continues(tmp_path):
     worker.load_dir.assert_called_once()
 
 
-# --- setup_pyplis_worker (used by pyplis and watcher) -------------------------
-
 def test_pyplis_unloadable_config_exits_without_fallback(tmp_path):
-    """Real PyplisWorker: a config file that does not exist triggers its fallback,
-    which the headless setup must turn into a stop."""
+    # Uses the real PyplisWorker: a missing config file makes it fall back to the default config
     missing = tmp_path / "does_not_exist.yml"
 
     with pytest.raises(SystemExit) as exc:
