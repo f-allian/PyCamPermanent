@@ -20,6 +20,10 @@ Examples:
     python pipeline/run_mvp.py --root /root/pycam_mvp
     python pipeline/run_mvp.py --root /root/pycam_mvp --dry-run
     python pipeline/run_mvp.py --root /root/pycam_mvp --date 2026-11-24 --max-hours 1
+    python pipeline/run_mvp.py --root /root/pycam_mvp --date 2026-11-24 --web-only
+
+If a site file has publish_dir, each updated day is also copied to the website folder and its
+date added to the website's date list (see web_data.publish_day).
 """
 import argparse
 import datetime
@@ -36,7 +40,7 @@ import pandas as pd
 import yaml
 
 from sources import SourceError, make_source
-from web_data import build_day, write_day
+from web_data import build_day, publish_day, write_day
 
 # Config keys that hold file or folder paths (same list as path_params in so2_camera_processor.py)
 PATH_KEYS = ['img_dir', 'dark_img_dir', 'transfer_dir', 'spec_dir', 'dark_spec_dir', 'bg_A_path', 'bg_B_path',
@@ -436,6 +440,33 @@ def update_web_data(site, date, root):
     return write_day(root / 'web', site.get('web_prefix', site['name']), day_data)
 
 
+def update_website(site, dates, root, dry_run):
+    """Rebuild the day files for these dates and, if the site has a publish_dir, copy them to the website."""
+    name = site['name']
+    publish_dir = site.get('publish_dir')
+
+    for date in sorted(dates):
+        if dry_run:
+            if publish_dir:
+                log(f"[{name}] would update and publish web data for {date} to {publish_dir}")
+            continue
+        try:
+            web_file = update_web_data(site, date, root)
+            if web_file is None:
+                log(f"[{name}] no finished hours for {date}, nothing to publish")
+                continue
+            log(f"[{name}] web data updated: {web_file}")
+
+            if publish_dir:
+                prefix = site.get('web_prefix', name)
+                published = publish_day(web_file, Path(publish_dir), prefix, root / 'backup')
+                write_status(root, f"{name} {date} published to {published}")
+                log(f"[{name}] published: {published}")
+        except Exception as e:
+            write_status(root, f"{name} {date} web data FAILED: {e}")
+            log(f"[{name}] web data for {date} failed: {e}")
+
+
 def load_sites(root, only_site):
     sites = []
     for path in sorted((root / 'sites').glob('*.yml')):
@@ -460,6 +491,8 @@ def main():
     parser.add_argument('--max-hours', type=int, help="maximum hours to process per site in this run")
     parser.add_argument('--dry-run', action='store_true',
                         help="check templates and list what would be processed, without copying anything")
+    parser.add_argument('--web-only', action='store_true',
+                        help="don't process anything, just rebuild (and publish) the web data for the dates")
     parser.add_argument('--code-dir', default=str(Path(__file__).resolve().parent.parent),
                         help="PyCamPermanent folder with process_emission_rates.py")
     parser.add_argument('--python', default=sys.executable, help="python of the PyCam environment")
@@ -477,16 +510,13 @@ def main():
         if not sites:
             log(f"No site files in {root / 'sites'}")
         for site in sites:
+            if args.web_only:
+                update_website(site, dates_to_check(site, args.date), root, args.dry_run)
+                continue
             updated_dates = run_site(site, paths, args)
-            for date in sorted(updated_dates):
-                try:
-                    web_file = update_web_data(site, date, root)
-                except Exception as e:
-                    write_status(root, f"{site['name']} {date} web data FAILED: {e}")
-                    log(f"[{site['name']}] web data for {date} failed: {e}")
-                    continue
-                if web_file:
-                    log(f"[{site['name']}] web data updated: {web_file}")
+            if args.dry_run and site.get('publish_dir'):
+                log(f"[{site['name']}] publishing is on: new days will be copied to {site['publish_dir']}")
+            update_website(site, updated_dates, root, args.dry_run)
     finally:
         lock_file.unlink(missing_ok=True)
 

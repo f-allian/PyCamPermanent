@@ -32,6 +32,11 @@ lookback_days: 1              # 1 = today only (UTC); 2 adds yesterday (a full b
 max_hours_per_run: 1          # hours processed per run; cron catches up over later runs
 web_prefix: reventador        # web/<web_prefix>_data_<date>.json and <web_prefix>_dates.json
 
+# Optional: the folder the website reads from. When set, every updated day is copied there and
+# its date added to the website's <web_prefix>_dates.json (existing dates are kept, nothing is
+# deleted, and the original date list is backed up to <root>/backup/ before the first change).
+# publish_dir: /srv/volcano/reventador/web
+
 # Optional environment variables for the PyCam runs, e.g. to force the OpenBLAS kernel
 # env:
 #   OPENBLAS_CORETYPE: Haswell

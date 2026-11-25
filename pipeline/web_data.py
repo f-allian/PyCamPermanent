@@ -145,16 +145,19 @@ def build_day(processed_dirs, date):
     }
 
 
+def write_json(path, data):
+    """Write to a temporary file first and then swap it in, so the website never reads a half-written file."""
+    tmp_path = path.with_name(path.name + '.tmp')
+    with open(tmp_path, 'w') as f:
+        json.dump(data, f, indent=2)
+    os.replace(tmp_path, path)
+
+
 def write_day(web_dir, prefix, day_data):
     """Write <prefix>_data_<date>.json and refresh the <prefix>_dates.json index."""
     web_dir.mkdir(parents=True, exist_ok=True)
     path = web_dir / f"{prefix}_data_{day_data['date']}.json"
-
-    # Write to a temporary file first so the website never reads a half-written file
-    tmp_path = path.with_suffix('.json.tmp')
-    with open(tmp_path, 'w') as f:
-        json.dump(day_data, f, indent=2)
-    os.replace(tmp_path, path)
+    write_json(path, day_data)
 
     dates = []
     for file in web_dir.glob(f'{prefix}_data_*.json'):
@@ -162,7 +165,38 @@ def write_day(web_dir, prefix, day_data):
         if match:
             dates.append(match.group(1))
     dates.sort(reverse=True)
-    with open(web_dir / f'{prefix}_dates.json', 'w') as f:
-        json.dump(dates, f, indent=2)
+    write_json(web_dir / f'{prefix}_dates.json', dates)
 
     return path
+
+
+def publish_day(day_file, publish_dir, prefix, backup_dir):
+    """
+    Copy one day's JSON into the website folder and add its date to the website's date list.
+    Dates already in the list (e.g. older days made by other scripts) are kept. Nothing is deleted.
+    :param day_file:    our <prefix>_data_<date>.json
+    :param publish_dir: the folder the website reads from
+    :param backup_dir:  where a copy of the website's date list is kept before we first change it
+    """
+    if not publish_dir.is_dir():
+        raise FileNotFoundError(f"publish folder does not exist: {publish_dir}")
+
+    with open(day_file) as f:
+        day_data = json.load(f)
+    write_json(publish_dir / day_file.name, day_data)
+
+    dates_file = publish_dir / f'{prefix}_dates.json'
+    dates = []
+    if dates_file.exists():
+        backup_file = backup_dir / f'{prefix}_dates.original.json'
+        if not backup_file.exists():
+            backup_dir.mkdir(parents=True, exist_ok=True)
+            backup_file.write_text(dates_file.read_text())
+        with open(dates_file) as f:
+            dates = json.load(f)
+
+    if day_data['date'] not in dates:
+        dates.append(day_data['date'])
+    dates.sort(reverse=True)
+    write_json(dates_file, dates)
+    return publish_dir / day_file.name
